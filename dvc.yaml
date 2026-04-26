@@ -1,0 +1,53 @@
+# schema: '2.0'
+
+stages:
+  data_ingestion:
+    cmd: python src/chickenDiseaseClassification/pipeline/stage_01_data_ingestion.py
+    deps:
+      - config/config.yaml
+      - src/chickenDiseaseClassification/pipeline/stage_01_data_ingestion.py
+    outs:
+      - artifacts/data_ingestion/Chicken-fecal-images
+
+  prepare_base_model:
+    cmd: python src/chickenDiseaseClassification/pipeline/stage_02_prepare_base_model.py
+    deps:
+      - config/config.yaml
+      - src/chickenDiseaseClassification/pipeline/stage_02_prepare_base_model.py
+    params:
+        - IMAGE_SIZE
+        - INCLUDE_TOP
+        - CLASSES
+        - WEIGHTS
+        - LEARNING_RATE
+    outs:
+      - artifacts/prepare_base_model
+
+  training:
+    cmd: python src/chickenDiseaseClassification/pipeline/stage_03_model_trainer.py
+    deps:
+      - artifacts/data_ingestion/Chicken-fecal-images
+      - artifacts/prepare_base_model
+      - config/config.yaml
+      - src/chickenDiseaseClassification/components/prepare_callbacks.py
+      - src/chickenDiseaseClassification/pipeline/stage_03_model_trainer.py
+    params:
+      - AUGMENTATION
+      - IMAGE_SIZE
+      - BATCH_SIZE
+      - EPOCHS
+    outs:
+      - artifacts/training/model.h5
+
+  evaluation:
+    cmd: python src/chickenDiseaseClassification/pipeline/stage_04_model_evaluation.py
+    deps:
+      - artifacts/data_ingestion/Chicken-fecal-images
+      - artifacts/training/model.h5
+      - config/config.yaml
+      - src/chickenDiseaseClassification/pipeline/stage_04_model_evaluation.py
+    params:
+      - IMAGE_SIZE
+      - BATCH_SIZE
+    outs:
+      - scores.json
